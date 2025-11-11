@@ -6,7 +6,7 @@ function fib(n: nat): nat
 }
 
 lemma ToBeProven() 
-ensures forall n:nat :: n>=6 ==> fib(n-0)==5*fib(n-4)+3*fib(n-5)
+ensures forall n:nat :: n>=6 ==> fib(n)==5*fib(n-4)+3*fib(n-5)
 {
   forall n:nat
     ensures n>=6 ==> fib(n-0)==5*fib(n-4)+3*fib(n-5)
