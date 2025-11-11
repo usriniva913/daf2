@@ -9,7 +9,7 @@ lemma ToBeProven()
 ensures forall n:nat :: n>=6 ==> fib(n)==5*fib(n-4)+3*fib(n-5)
 {
   forall n:nat
-    ensures n>=6 ==> fib(n-0)==5*fib(n-4)+3*fib(n-5)
+    ensures n>=6 ==> fib(n)==5*fib(n-4)+3*fib(n-5)
   {
     if n>=6 {  //deduction, introduce hypothesis    
       // fill in your own logic below to prove fib(n-0)==5*fib(n-4)+3*fib(n-5)
