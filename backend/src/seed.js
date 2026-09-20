@@ -42,6 +42,10 @@ async function seed() {
       date: 'Apr 12, 2026',
       time: '6:00 PM',
       location: 'Hildegard Park',
+      coordinates: {
+        type: 'Point',
+        coordinates: [-86.9150, 40.4280]
+      },
       skillRange: '3.0-4.0',
       maxParticipants: 4,
       participants: [gabriel._id, josh._id, jacob._id, sarah._id],
@@ -54,6 +58,10 @@ async function seed() {
       date: 'Apr 10, 2026',
       time: '4:00 PM',
       location: 'Co-Rec Courts',
+      coordinates: {
+        type: 'Point',
+        coordinates: [-86.9100, 40.4250]
+      },
       skillRange: '2.5-4.0',
       maxParticipants: 6,
       participants: [gabriel._id, alex._id, ethan._id, emma._id],
@@ -66,6 +74,10 @@ async function seed() {
       date: 'Apr 8, 2026',
       time: '5:30 PM',
       location: 'Coyner Park',
+      coordinates: {
+        type: 'Point',
+        coordinates: [-86.9200, 40.4300]
+      },
       skillRange: '3.0-3.5',
       maxParticipants: 4,
       participants: [gabriel._id, jacob._id, sarah._id, emma._id],
@@ -78,6 +90,10 @@ async function seed() {
       date: 'Apr 15, 2026',
       time: '3:00 PM',
       location: 'Slayter Hill Fields',
+      coordinates: {
+        type: 'Point',
+        coordinates: [-86.9050, 40.4320]
+      },
       skillRange: '2.0-4.0',
       maxParticipants: 10,
       participants: [gabriel._id, alex._id, ethan._id, jacob._id],

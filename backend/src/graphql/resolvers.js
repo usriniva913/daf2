@@ -29,6 +29,25 @@ const resolvers = {
     getFriends: async (_, { userId }) => {
       const user = await User.findById(userId).populate('friends');
       return user ? user.friends : [];
+    },
+
+    getNearbySessions: async (_, { latitude, longitude, radiusKm }) => {
+      const radiusInMeters = radiusKm * 1000;
+      return Session.find({
+        coordinates: {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [longitude, latitude]
+            },
+            $maxDistance: radiusInMeters
+          }
+        },
+        status: { $in: ['upcoming', 'in_progress'] }
+      })
+        .populate('participants')
+        .populate('host')
+        .sort({ createdAt: -1 });
     }
   },
 

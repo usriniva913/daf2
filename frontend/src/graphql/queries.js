@@ -61,3 +61,31 @@ export const SUBMIT_RATINGS = gql`
     }
   }
 `;
+
+export const GET_NEARBY_SESSIONS = gql`
+  query GetNearbySessions($latitude: Float!, $longitude: Float!, $radiusKm: Float!) {
+    getNearbySessions(latitude: $latitude, longitude: $longitude, radiusKm: $radiusKm) {
+      id
+      sport
+      date
+      time
+      location
+      coordinates {
+        type
+        coordinates
+      }
+      skillRange
+      participants {
+        id
+        name
+        skillLevel
+        socialRating
+      }
+      host {
+        id
+        name
+      }
+      status
+    }
+  }
+`;

@@ -7,6 +7,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import RateSessionScreen from './src/screens/RateSessionScreen';
 import SessionCompleteScreen from './src/screens/SessionCompleteScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import MapScreen from './src/screens/MapScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -22,6 +23,7 @@ export default function App() {
           tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
           tabBarIcon: () => {
             if (route.name === 'Home') return <Text style={{ fontSize: 22 }}>🏠</Text>;
+            if (route.name === 'Map') return <Text style={{ fontSize: 22 }}>🗺️</Text>;
             if (route.name === 'Profile') return <Text style={{ fontSize: 22 }}>👤</Text>;
             return null;
           },
@@ -31,6 +33,7 @@ export default function App() {
         })}
       >
         <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Map" component={MapScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
         <Tab.Screen name="RateSession" component={RateSessionScreen} options={{ tabBarButton: () => null }} />
         <Tab.Screen name="SessionComplete" component={SessionCompleteScreen} options={{ tabBarButton: () => null }} />

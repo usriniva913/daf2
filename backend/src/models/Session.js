@@ -5,6 +5,10 @@ const sessionSchema = new mongoose.Schema({
   date: { type: String, required: true },
   time: { type: String, required: true },
   location: { type: String, required: true },
+  coordinates: {
+    type: { type: String, enum: ['Point'], required: true },
+    coordinates: { type: [Number], required: true }
+  },
   skillRange: { type: String, default: '3.0-4.0' },
   maxParticipants: { type: Number, default: 6 },
   participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -13,5 +17,7 @@ const sessionSchema = new mongoose.Schema({
   rated: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
+
+sessionSchema.index({ coordinates: '2dsphere' });
 
 module.exports = mongoose.model('Session', sessionSchema);
