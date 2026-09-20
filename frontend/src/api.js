@@ -12,3 +12,4 @@ export async function graphql(query, variables = {}) {
 }
 
 export const CURRENT_USER_ID = '69db4924fa3cb80a64df2953';
+export const GRAPHQL_ENDPOINT = API_URL;

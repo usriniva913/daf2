@@ -17,12 +17,18 @@ const typeDefs = `#graphql
     date: String!
     time: String!
     location: String!
+    coordinates: Coordinates
     skillRange: String
     maxParticipants: Int
     participants: [User]
     host: User
     status: String
     rated: Boolean
+  }
+
+  type Coordinates {
+    type: String!
+    coordinates: [Float!]!
   }
 
   type RatingResult {
@@ -44,6 +50,7 @@ const typeDefs = `#graphql
     getSessions(status: String): [Session]
     getCompletedSessions(userId: ID!): [Session]
     getFriends(userId: ID!): [User]
+    getNearbySessions(latitude: Float!, longitude: Float!, radiusKm: Float!): [Session]
   }
 
   type Mutation {
