@@ -1,158 +1,41 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { graphql, CURRENT_USER_ID } from '../api';
 
 const PURPLE = '#7C7EFF';
-const GOLD = '#FFB800';
+const SPORTS = ['Basketball', 'Pickleball', 'Soccer', 'Tennis', 'Volleyball'];
+const LEVELS = { 1: 'Beginner', 2: 'Casual', 3: 'Intermediate', 4: 'Advanced', 5: 'Competitive' };
+const USER_QUERY = `query GetUser($id: ID!) { getUser(id: $id) { id name bio socialRating totalRatings sports skillLevel friends { id name socialRating sports } } }`;
 
-const QUERY = `
-  query GetUser($id: ID!) {
-    getUser(id: $id) {
-      id name email bio sports skillLevel socialRating totalRatings
-      friends { id name socialRating sports }
-    }
-  }
-`;
-
-function StarRating({ rating }) {
-  const filled = Math.round(rating);
-  return <Text style={styles.stars}>{'★'.repeat(filled)}{'☆'.repeat(5 - filled)}</Text>;
+function PreferencesModal({ visible, preferences, onClose, onSave }) {
+  const [draft, setDraft] = useState(preferences);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { if (visible) setDraft(preferences); }, [visible, preferences]);
+  const toggle = (sport) => setDraft((items) => items.some((item) => item.sport === sport)
+    ? items.filter((item) => item.sport !== sport) : [...items, { sport, skillLevel: 3 }]);
+  const setLevel = (sport, skillLevel) => setDraft((items) => items.map((item) => item.sport === sport ? { ...item, skillLevel } : item));
+  const save = async () => { setSaving(true); try { await onSave(draft); onClose(); } catch (error) { Alert.alert('Could not save', error.message); } setSaving(false); };
+  return <Modal visible={visible} animationType="slide" onRequestClose={onClose}><View style={styles.modal}>
+    <View style={styles.modalHeader}><Text style={styles.modalTitle}>Sports & skill levels</Text><TouchableOpacity onPress={onClose}><Text style={styles.cancel}>Cancel</Text></TouchableOpacity></View>
+    <ScrollView contentContainerStyle={styles.modalContent}><Text style={styles.hint}>Choose your sports and set your level for each one.</Text>{SPORTS.map((sport) => {
+      const preference = draft.find((item) => item.sport === sport);
+      return <View key={sport} style={styles.choiceCard}><TouchableOpacity style={styles.choice} onPress={() => toggle(sport)}><View style={[styles.box, preference && styles.boxSelected]}>{preference && <Text style={styles.check}>✓</Text>}</View><Text style={styles.choiceText}>{sport}</Text></TouchableOpacity>{preference && <View style={styles.slider}><Text style={styles.level}>{LEVELS[preference.skillLevel]} · {preference.skillLevel}/5</Text><Slider minimumValue={1} maximumValue={5} step={1} value={preference.skillLevel} minimumTrackTintColor={PURPLE} onValueChange={(value) => setLevel(sport, value)} /></View>}</View>;
+    })}</ScrollView>
+    <TouchableOpacity style={[styles.save, saving && styles.disabled]} disabled={saving} onPress={save}><Text style={styles.saveText}>{saving ? 'Saving…' : 'Save preferences'}</Text></TouchableOpacity>
+  </View></Modal>;
 }
 
 export default function ProfileScreen({ navigation }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchUser = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await graphql(QUERY, { id: CURRENT_USER_ID });
-      setUser(data.getUser);
-    } catch (err) {
-      console.log('Profile fetch error:', err.message);
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { fetchUser(); }, [fetchUser]);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', fetchUser);
-    return unsubscribe;
-  }, [navigation, fetchUser]);
-
-  if (loading && !user) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={PURPLE} /></View>;
-  }
-
-  if (!user) return <View style={styles.center}><Text>Error loading profile</Text></View>;
-
-  const renderFriend = ({ item }) => (
-    <View style={styles.friendRow}>
-      <View style={styles.friendAvatar}>
-        <Text style={styles.friendInitial}>{item.name.charAt(0)}</Text>
-      </View>
-      <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{item.name}</Text>
-        <Text style={styles.friendSports}>{item.sports?.join(', ')}</Text>
-      </View>
-      <View style={styles.friendRating}>
-        <Text style={styles.friendRatingNum}>
-          {item.socialRating > 0 ? item.socialRating.toFixed(1) : 'N/A'}
-        </Text>
-        {item.socialRating > 0 && <StarRating rating={item.socialRating} />}
-      </View>
-    </View>
-  );
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-      </View>
-      <FlatList
-        data={user.friends || []}
-        keyExtractor={(item) => item.id}
-        renderItem={renderFriend}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchUser} />}
-        ListHeaderComponent={
-          <View>
-            <View style={styles.profileCard}>
-              <View style={styles.avatarLarge}>
-                <Text style={styles.avatarLargeText}>{user.name.charAt(0)}</Text>
-              </View>
-              <Text style={styles.userName}>{user.name}</Text>
-              <Text style={styles.userBio}>{user.bio}</Text>
-              <View style={styles.ratingBox}>
-                <Text style={styles.ratingNumber}>
-                  {user.socialRating > 0 ? user.socialRating.toFixed(1) : '—'}
-                </Text>
-                {user.socialRating > 0 && <StarRating rating={user.socialRating} />}
-                <Text style={styles.ratingCount}>
-                  {user.totalRatings > 0 ? `${user.totalRatings} ratings` : 'No ratings yet'}
-                </Text>
-              </View>
-              <View style={styles.sportsRow}>
-                {user.sports?.map((s, i) => (
-                  <View key={i} style={styles.sportPill}>
-                    <Text style={styles.sportPillText}>{s}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-            <Text style={styles.friendsTitle}>
-              Friends {user.friends?.length > 0 ? `(${user.friends.length})` : ''}
-            </Text>
-            {(!user.friends || user.friends.length === 0) && (
-              <Text style={styles.noFriends}>No friends yet — rate a session and add some!</Text>
-            )}
-          </View>
-        }
-        contentContainerStyle={styles.listContent}
-      />
-    </View>
-  );
+  const [user, setUser] = useState(null); const [preferences, setPreferences] = useState([]); const [preferencesInitialized, setPreferencesInitialized] = useState(false); const [loading, setLoading] = useState(true); const [editing, setEditing] = useState(false);
+  const fetchUser = useCallback(async () => { setLoading(true); try { setUser((await graphql(USER_QUERY, { id: CURRENT_USER_ID })).getUser); } catch (error) { console.log('Profile fetch error:', error.message); } setLoading(false); }, []);
+  useEffect(() => { fetchUser(); }, [fetchUser]); useEffect(() => navigation.addListener('focus', fetchUser), [navigation, fetchUser]);
+  // This is deliberately client-only: the current API has only a global skill
+  // field, so changing it would be a backend contract change.
+  useEffect(() => { if (user && !preferencesInitialized) { setPreferences((user.sports || []).map((sport) => ({ sport, skillLevel: Math.round(user.skillLevel || 3) }))); setPreferencesInitialized(true); } }, [user, preferencesInitialized]);
+  const save = async (sportPreferences) => setPreferences(sportPreferences);
+  if (loading && !user) return <View style={styles.center}><ActivityIndicator size="large" color={PURPLE} /></View>; if (!user) return <View style={styles.center}><Text>Error loading profile</Text></View>;
+  return <View style={styles.container}><View style={styles.header}><Text style={styles.headerTitle}>Profile</Text></View><FlatList data={user.friends || []} keyExtractor={(item) => item.id} refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchUser} />} renderItem={({ item }) => <View style={styles.friend}><Text style={styles.friendName}>{item.name}</Text><Text style={styles.friendSports}>{item.sports?.join(', ')}</Text></View>} ListHeaderComponent={<View><View style={styles.card}><View style={styles.avatar}><Text style={styles.avatarText}>{user.name.charAt(0)}</Text></View><Text style={styles.name}>{user.name}</Text><Text style={styles.bio}>{user.bio}</Text><Text style={styles.rating}>{user.socialRating > 0 ? user.socialRating.toFixed(1) : '—'}</Text><Text style={styles.ratingCount}>{user.totalRatings > 0 ? `${user.totalRatings} ratings` : 'No ratings yet'}</Text><View style={styles.sportHeading}><Text style={styles.section}>My sports</Text><TouchableOpacity onPress={() => setEditing(true)}><Text style={styles.edit}>Edit</Text></TouchableOpacity></View>{preferences.length ? preferences.map(({ sport, skillLevel }) => <View key={sport} style={styles.pill}><Text style={styles.pillSport}>{sport}</Text><Text style={styles.pillLevel}>{LEVELS[skillLevel]} · {skillLevel}/5</Text></View>) : <TouchableOpacity onPress={() => setEditing(true)}><Text style={styles.edit}>Add sports you play</Text></TouchableOpacity>}</View><Text style={styles.friendsTitle}>Friends {user.friends?.length ? `(${user.friends.length})` : ''}</Text></View>} contentContainerStyle={styles.list} /><PreferencesModal visible={editing} preferences={preferences} onClose={() => setEditing(false)} onSave={save} /></View>;
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: PURPLE, paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20 },
-  headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
-  listContent: { padding: 16, paddingBottom: 40 },
-  profileCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 20,
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3,
-  },
-  avatarLarge: {
-    width: 70, height: 70, borderRadius: 35, backgroundColor: PURPLE,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 12,
-  },
-  avatarLargeText: { color: '#fff', fontSize: 30, fontWeight: '700' },
-  userName: { fontSize: 22, fontWeight: '700', color: '#222' },
-  userBio: { fontSize: 14, color: '#666', marginTop: 4 },
-  ratingBox: { alignItems: 'center', marginTop: 12 },
-  ratingNumber: { fontSize: 32, fontWeight: '700', color: '#222' },
-  stars: { fontSize: 18, color: GOLD, marginTop: 2 },
-  ratingCount: { fontSize: 12, color: '#888', marginTop: 2 },
-  sportsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 },
-  sportPill: { backgroundColor: '#E8E8FF', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5, margin: 3 },
-  sportPillText: { fontSize: 12, fontWeight: '600', color: '#3A2D80' },
-  friendsTitle: { fontSize: 20, fontWeight: '700', color: '#222', marginBottom: 12 },
-  noFriends: { fontSize: 14, color: '#888', textAlign: 'center', marginTop: 20 },
-  friendRow: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10,
-    flexDirection: 'row', alignItems: 'center',
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
-  },
-  friendAvatar: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#999',
-    justifyContent: 'center', alignItems: 'center', marginRight: 12,
-  },
-  friendInitial: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  friendInfo: { flex: 1 },
-  friendName: { fontSize: 16, fontWeight: '600', color: '#222' },
-  friendSports: { fontSize: 12, color: '#888', marginTop: 2 },
-  friendRating: { alignItems: 'center' },
-  friendRatingNum: { fontSize: 18, fontWeight: '700', color: '#222' },
-});
+const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: '#F5F5F5' }, center: { flex: 1, justifyContent: 'center', alignItems: 'center' }, header: { backgroundColor: PURPLE, paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20 }, headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff' }, list: { padding: 16, paddingBottom: 40 }, card: { backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 20 }, avatar: { width: 70, height: 70, borderRadius: 35, backgroundColor: PURPLE, justifyContent: 'center', alignItems: 'center', marginBottom: 12 }, avatarText: { color: '#fff', fontSize: 30, fontWeight: '700' }, name: { fontSize: 22, fontWeight: '700' }, bio: { color: '#666', marginTop: 4 }, rating: { fontSize: 32, fontWeight: '700', marginTop: 12 }, ratingCount: { fontSize: 12, color: '#888' }, sportHeading: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', marginTop: 18, marginBottom: 4 }, section: { fontWeight: '700' }, edit: { color: PURPLE, fontWeight: '700' }, pill: { width: '100%', backgroundColor: '#E8E8FF', borderRadius: 10, padding: 9, marginTop: 5, flexDirection: 'row', justifyContent: 'space-between' }, pillSport: { color: '#3A2D80', fontWeight: '700' }, pillLevel: { color: '#51478C', fontSize: 12 }, friendsTitle: { fontSize: 20, fontWeight: '700', marginBottom: 12 }, friend: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10 }, friendName: { fontWeight: '600', fontSize: 16 }, friendSports: { color: '#888', fontSize: 12, marginTop: 2 }, modal: { flex: 1, backgroundColor: '#F5F5F5' }, modalHeader: { backgroundColor: PURPLE, paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between' }, modalTitle: { color: '#fff', fontSize: 22, fontWeight: '700' }, cancel: { color: '#fff', fontWeight: '600' }, modalContent: { padding: 20 }, hint: { color: '#666', marginBottom: 16 }, choiceCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10 }, choice: { flexDirection: 'row', alignItems: 'center' }, box: { width: 24, height: 24, borderWidth: 2, borderColor: '#BBB', borderRadius: 6, marginRight: 12, alignItems: 'center', justifyContent: 'center' }, boxSelected: { backgroundColor: PURPLE, borderColor: PURPLE }, check: { color: '#fff', fontWeight: '700' }, choiceText: { fontSize: 16, fontWeight: '600' }, slider: { marginTop: 12 }, level: { color: '#51478C', fontWeight: '600' }, save: { margin: 20, padding: 16, alignItems: 'center', backgroundColor: PURPLE, borderRadius: 10 }, disabled: { opacity: 0.6 }, saveText: { color: '#fff', fontWeight: '700', fontSize: 16 } });
