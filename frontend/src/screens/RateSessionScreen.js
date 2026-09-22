@@ -39,8 +39,18 @@ function RatingPicker({ value, onValueChange }) {
 }
 
 export default function RateSessionScreen({ route, navigation }) {
-  const { session } = route.params;
-  const otherParticipants = session.participants.filter(p => p.id !== CURRENT_USER_ID);
+  const session = route.params?.session;
+  if (!session) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyTitle}>Session unavailable</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Home')}>
+          <Text style={styles.backBtnText}>Back to Home</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  const otherParticipants = (session.participants || []).filter(p => p.id !== CURRENT_USER_ID);
 
   const [ratings, setRatings] = useState(
     otherParticipants.reduce((acc, p) => ({ ...acc, [p.id]: 3 }), {})
@@ -88,6 +98,12 @@ export default function RateSessionScreen({ route, navigation }) {
         </Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {otherParticipants.length === 0 && (
+          <View style={styles.noPlayersCard}>
+            <Text style={styles.noPlayersTitle}>No other players to rate</Text>
+            <Text style={styles.noPlayersText}>You were the only participant in this session.</Text>
+          </View>
+        )}
         {otherParticipants.map((player) => (
           <View key={player.id} style={styles.playerRow}>
             <View style={styles.playerHeader}>
@@ -111,7 +127,7 @@ export default function RateSessionScreen({ route, navigation }) {
           onPress={handleSubmit}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Submit Ratings</Text>}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>{otherParticipants.length ? 'Submit Ratings' : 'Complete Session'}</Text>}
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -120,6 +136,10 @@ export default function RateSessionScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#F5F5F5' },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#222', marginBottom: 16 },
+  backBtn: { backgroundColor: PURPLE, borderRadius: 10, paddingHorizontal: 18, paddingVertical: 12 },
+  backBtnText: { color: '#fff', fontWeight: '700' },
   header: { backgroundColor: PURPLE, paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
   contextBanner: { backgroundColor: '#E8E8FF', marginHorizontal: 16, marginTop: 12, padding: 12, borderRadius: 10 },
@@ -129,6 +149,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
+  noPlayersCard: { backgroundColor: '#fff', padding: 20, borderRadius: 14, alignItems: 'center', marginBottom: 14 },
+  noPlayersTitle: { fontSize: 17, fontWeight: '700', color: '#222', marginBottom: 6 },
+  noPlayersText: { color: '#666', textAlign: 'center' },
   playerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   playerName: { fontSize: 20, fontWeight: '700', color: '#222', flex: 1 },
   friendCheck: {

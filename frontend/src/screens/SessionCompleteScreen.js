@@ -1,12 +1,22 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Share, Alert } from 'react-native';
 
 const PURPLE = '#7C7EFF';
 const GREEN = '#2DB55D';
 const BLUE = '#3366E6';
 
 export default function SessionCompleteScreen({ route, navigation }) {
-  const { avgRatingGiven, friendRequestsSent, playersRated } = route.params;
+  const { avgRatingGiven = 0, friendRequestsSent = 0, playersRated = 0 } = route.params || {};
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `I just completed a FieldDay session and rated ${playersRated} player${playersRated === 1 ? '' : 's'}!`,
+      });
+    } catch (error) {
+      Alert.alert('Unable to share', 'Please try again.');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -29,7 +39,7 @@ export default function SessionCompleteScreen({ route, navigation }) {
             Friend requests sent: <Text style={styles.statBold}>{friendRequestsSent}</Text>
           </Text>
         </View>
-        <TouchableOpacity style={styles.shareBtn}>
+        <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
           <Text style={styles.shareBtnText}>Share Session</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.navigate('Home')}>
