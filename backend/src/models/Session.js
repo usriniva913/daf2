@@ -14,7 +14,11 @@ const sessionSchema = new mongoose.Schema({
   participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   host: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   status: { type: String, enum: ['upcoming', 'in_progress', 'completed'], default: 'completed' },
+  // Kept for backwards compatibility with existing seeded records.  Rating is
+  // tracked per participant in `ratedBy`, rather than once for the whole
+  // session, so every player gets an opportunity to submit ratings.
   rated: { type: Boolean, default: false },
+  ratedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdAt: { type: Date, default: Date.now }
 });
 

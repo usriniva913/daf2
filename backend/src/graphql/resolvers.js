@@ -19,7 +19,7 @@ const resolvers = {
       return Session.find({
         status: 'completed',
         participants: userId,
-        rated: false
+        ratedBy: { $ne: userId }
       })
         .populate('participants')
         .populate('host')
@@ -55,10 +55,35 @@ const resolvers = {
     submitRatings: async (_, { sessionId, raterId, ratings }) => {
       const session = await Session.findById(sessionId);
       if (!session) throw new Error('Session not found');
+      if (session.status !== 'completed') throw new Error('This session has not ended yet');
+
+      const participantIds = session.participants.map((participant) => participant.toString());
+      if (!participantIds.includes(raterId)) {
+        throw new Error('Only session participants can submit ratings');
+      }
+      if ((session.ratedBy || []).some((participant) => participant.toString() === raterId)) {
+        throw new Error('You have already rated this session');
+      }
+
+      const ratingIds = ratings.map(({ userId }) => userId);
+      const expectedRatingIds = participantIds.filter((participantId) => participantId !== raterId);
+      const submittedIdsAreValid =
+        ratingIds.length === expectedRatingIds.length &&
+        new Set(ratingIds).size === ratingIds.length &&
+        ratingIds.every((userId) => expectedRatingIds.includes(userId));
+
+      if (!submittedIdsAreValid) {
+        throw new Error('Submit one rating for each other session participant');
+      }
+      if (ratings.some(({ rating }) => !Number.isInteger(rating) || rating < 1 || rating > 5)) {
+        throw new Error('Ratings must be whole numbers from 1 to 5');
+      }
 
       let totalGiven = 0;
       let friendsSent = 0;
       const updatedUsers = [];
+      const rater = await User.findById(raterId);
+      if (!rater) throw new Error('Rater not found');
 
       for (const { userId, rating, addFriend } of ratings) {
         const user = await User.findById(userId);
@@ -70,11 +95,11 @@ const resolvers = {
         updatedUsers.push(user);
 
         if (addFriend) {
-          const rater = await User.findById(raterId);
-          if (rater && !rater.friends.includes(userId)) {
+          const isAlreadyFriend = rater.friends.some((friendId) => friendId.toString() === userId);
+          if (!isAlreadyFriend) {
             rater.friends.push(userId);
             await rater.save();
-            if (!user.friends.includes(raterId)) {
+            if (!user.friends.some((friendId) => friendId.toString() === raterId)) {
               user.friends.push(raterId);
               await user.save();
             }
@@ -83,7 +108,7 @@ const resolvers = {
         }
       }
 
-      session.rated = true;
+      session.ratedBy.push(raterId);
       await session.save();
 
       const avgRatingGiven = ratings.length > 0
@@ -104,11 +129,11 @@ const resolvers = {
       const friend = await User.findById(friendId);
       if (!user || !friend) throw new Error('User not found');
 
-      if (!user.friends.includes(friendId)) {
+      if (!user.friends.some((id) => id.toString() === friendId)) {
         user.friends.push(friendId);
         await user.save();
       }
-      if (!friend.friends.includes(userId)) {
+      if (!friend.friends.some((id) => id.toString() === userId)) {
         friend.friends.push(userId);
         await friend.save();
       }
